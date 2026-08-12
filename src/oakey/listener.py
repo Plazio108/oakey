@@ -1,6 +1,7 @@
 import os
 import sys
 import queue
+from queue import Queue
 import threading
 import time
 import atexit
@@ -114,11 +115,11 @@ class KeyListener:
     # ------------------------------------------------------------------
 
     @property
-    def queue(self) -> queue.Queue:
+    def queue(self) -> Queue:
         """Returns the current queue being used by the listener."""
         return self._queue
 
-    def get_queue(self) -> queue.Queue:
+    def get_queue(self) -> Queue:
         """Explicit method wrapper to return the active queue."""
         return self._queue
 
