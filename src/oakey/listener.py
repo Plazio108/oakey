@@ -6,6 +6,12 @@ import threading
 import time
 import atexit
 import string
+import select
+try:
+    import msvcrt
+except ImportError:
+    import termios
+    import tty
 from contextlib import contextmanager
 from typing import Optional, Callable, Generator
 
@@ -289,6 +295,7 @@ class KeyListener:
             self._prepare_terminal()
         except Exception as e:
             self._handle_error(e)
+            raise e
             return
 
         try:
