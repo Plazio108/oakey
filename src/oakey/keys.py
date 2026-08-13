@@ -1,34 +1,11 @@
-
-import string
-
-
-class _KeysMeta(type):
-    """Metaclass to dynamically auto-generate constants for letters, numbers, and modifier combinations."""
-    def __new__(mcs, name, bases, attrs):
-        # 1. Auto-generate letters (A-Z maps to lowercase, UPPER_A maps to uppercase, CTRL_A, ALT_A)
-        for char in string.ascii_lowercase:
-            upper_char = char.upper()
-            attrs[upper_char] = char                    # Keys.A = "a"
-            attrs[f"SHIFT_{upper_char}"] = upper_char   # Keys.SHIFT_A = "A"
-            # Keys.CTRL_A = "ctrl+a"
-            attrs[f"CTRL_{upper_char}"] = f"ctrl+{char}"
-            attrs[f"ALT_{upper_char}"] = f"alt+{char}"   # Keys.ALT_A = "alt+a"
-
-        # 2. Auto-generate numeric digits (NUM_0 to NUM_9, CTRL_0 to CTRL_9)
-        for digit in string.digits:
-            attrs[f"NUM_{digit}"] = digit
-            attrs[f"CTRL_{digit}"] = f"ctrl+{digit}"
-            attrs[f"ALT_{digit}"] = f"alt+{digit}"
-
-        return super().__new__(mcs, name, bases, attrs)
-
-
-class Keys(metaclass=_KeysMeta):
+class Keys:
     """
-    Standardized constant repository for Oakey key names, matching Textual syntax.
-    Auto-generates letters (A-Z), numbers (0-9), and common combinations.
+    Standardized constant repository for Oakey key names, matching Textual syntax 
+    and accommodating standard symbols and international layout characters (US, FR, ES, etc.).
     """
-    # Special & Navigation Keys
+    # ------------------------------------------------------------------
+    # Navigation & Special Keys
+    # ------------------------------------------------------------------
     UP = "up"
     DOWN = "down"
     LEFT = "left"
@@ -45,8 +22,14 @@ class Keys(metaclass=_KeysMeta):
     PAGE_UP = "page_up"
     PAGE_DOWN = "page_down"
     SPACE = "space"
+    CAPS_LOCK = "caps_lock"
+    NUM_LOCK = "num_lock"
+    SCROLL_LOCK = "scroll_lock"
+    PRINT_SCREEN = "print_screen"
 
+    # ------------------------------------------------------------------
     # Function Keys
+    # ------------------------------------------------------------------
     F1 = "f1"
     F2 = "f2"
     F3 = "f3"
@@ -59,3 +42,204 @@ class Keys(metaclass=_KeysMeta):
     F10 = "f10"
     F11 = "f11"
     F12 = "f12"
+
+    # ------------------------------------------------------------------
+    # Standard Letters (Lowercase, Uppercase/Shift, Ctrl, Alt)
+    # ------------------------------------------------------------------
+    A = "a"
+    SHIFT_A = "A"
+    CTRL_A = "ctrl+a"
+    ALT_A = "alt+a"
+    B = "b"
+    SHIFT_B = "B"
+    CTRL_B = "ctrl+b"
+    ALT_B = "alt+b"
+    C = "c"
+    SHIFT_C = "C"
+    CTRL_C = "ctrl+c"
+    ALT_C = "alt+c"
+    D = "d"
+    SHIFT_D = "D"
+    CTRL_D = "ctrl+d"
+    ALT_D = "alt+d"
+    E = "e"
+    SHIFT_E = "E"
+    CTRL_E = "ctrl+e"
+    ALT_E = "alt+e"
+    F = "f"
+    SHIFT_F = "F"
+    CTRL_F = "ctrl+f"
+    ALT_F = "alt+f"
+    G = "g"
+    SHIFT_G = "G"
+    CTRL_G = "ctrl+g"
+    ALT_G = "alt+g"
+    H = "h"
+    SHIFT_H = "H"
+    CTRL_H = "ctrl+h"
+    ALT_H = "alt+h"
+    I = "i"
+    SHIFT_I = "I"
+    CTRL_I = "ctrl+i"
+    ALT_I = "alt+i"
+    J = "j"
+    SHIFT_J = "J"
+    CTRL_J = "ctrl+j"
+    ALT_J = "alt+j"
+    K = "k"
+    SHIFT_K = "K"
+    CTRL_K = "ctrl+k"
+    ALT_K = "alt+k"
+    L = "l"
+    SHIFT_L = "L"
+    CTRL_L = "ctrl+l"
+    ALT_L = "alt+l"
+    M = "m"
+    SHIFT_M = "M"
+    CTRL_M = "ctrl+m"
+    ALT_M = "alt+m"
+    N = "n"
+    SHIFT_N = "N"
+    CTRL_N = "ctrl+n"
+    ALT_N = "alt+n"
+    O = "o"
+    SHIFT_O = "O"
+    CTRL_O = "ctrl+o"
+    ALT_O = "alt+o"
+    P = "p"
+    SHIFT_P = "P"
+    CTRL_P = "ctrl+p"
+    ALT_P = "alt+p"
+    Q = "q"
+    SHIFT_Q = "Q"
+    CTRL_Q = "ctrl+q"
+    ALT_Q = "alt+q"
+    R = "r"
+    SHIFT_R = "R"
+    CTRL_R = "ctrl+r"
+    ALT_R = "alt+r"
+    S = "s"
+    SHIFT_S = "S"
+    CTRL_S = "ctrl+s"
+    ALT_S = "alt+s"
+    T = "t"
+    SHIFT_T = "T"
+    CTRL_T = "ctrl+t"
+    ALT_T = "alt+t"
+    U = "u"
+    SHIFT_U = "U"
+    CTRL_U = "ctrl+u"
+    ALT_U = "alt+u"
+    V = "v"
+    SHIFT_V = "V"
+    CTRL_V = "ctrl+v"
+    ALT_V = "alt+v"
+    W = "w"
+    SHIFT_W = "W"
+    CTRL_W = "ctrl+w"
+    ALT_W = "alt+w"
+    X = "x"
+    SHIFT_X = "X"
+    CTRL_X = "ctrl+x"
+    ALT_X = "alt+x"
+    Y = "y"
+    SHIFT_Y = "Y"
+    CTRL_Y = "ctrl+y"
+    ALT_Y = "alt+y"
+    Z = "z"
+    SHIFT_Z = "Z"
+    CTRL_Z = "ctrl+z"
+    ALT_Z = "alt+z"
+
+    # ------------------------------------------------------------------
+    # Numeric Digits & Modifiers
+    # ------------------------------------------------------------------
+    NUM_0 = "0"
+    CTRL_0 = "ctrl+0"
+    ALT_0 = "alt+0"
+    NUM_1 = "1"
+    CTRL_1 = "ctrl+1"
+    ALT_1 = "alt+1"
+    NUM_2 = "2"
+    CTRL_2 = "ctrl+2"
+    ALT_2 = "alt+2"
+    NUM_3 = "3"
+    CTRL_3 = "ctrl+3"
+    ALT_3 = "alt+3"
+    NUM_4 = "4"
+    CTRL_4 = "ctrl+4"
+    ALT_4 = "alt+4"
+    NUM_5 = "5"
+    CTRL_5 = "ctrl+5"
+    ALT_5 = "alt+5"
+    NUM_6 = "6"
+    CTRL_6 = "ctrl+6"
+    ALT_6 = "alt+6"
+    NUM_7 = "7"
+    CTRL_7 = "ctrl+7"
+    ALT_7 = "alt+7"
+    NUM_8 = "8"
+    CTRL_8 = "ctrl+8"
+    ALT_8 = "alt+8"
+    NUM_9 = "9"
+    CTRL_9 = "ctrl+9"
+    ALT_9 = "alt+9"
+
+    # ------------------------------------------------------------------
+    # Top-Row Symbols (Layout-agnostic raw symbol naming)
+    # ------------------------------------------------------------------
+    EXCLAMATION = "!"
+    AT = "@"
+    HASH = "#"
+    DOLLAR = "$"
+    PERCENT = "%"
+    CARET = "^"
+    AMPERSAND = "&"
+    ASTERISK = "*"
+    L_PAREN = "("
+    R_PAREN = ")"
+
+    # ------------------------------------------------------------------
+    # Common International Layout Characters (FR, ES, Accents)
+    # ------------------------------------------------------------------
+    E_ACUTE = "é"
+    E_GRAVE = "è"
+    A_GRAVE = "à"
+    U_GRAVE = "ù"
+    C_CEDILLA = "ç"
+    OE_LIGATURE = "œ"
+
+    N_TILDE = "ñ"
+    A_ACUTE = "á"
+    I_ACUTE = "í"
+    O_ACUTE = "ó"
+    U_ACUTE = "ú"
+    U_DIAERESIS = "ü"
+    INVERTED_QUESTION = "¿"
+    INVERTED_EXCLAMATION = "¡"
+
+    # ------------------------------------------------------------------
+    # Standard Punctuation
+    # ------------------------------------------------------------------
+    MINUS = "-"
+    UNDERSCORE = "_"
+    EQUALS = "="
+    PLUS = "+"
+    L_BRACKET = "["
+    L_BRACE = "{"
+    R_BRACKET = "]"
+    R_BRACE = "}"
+    BACKSLASH = "\\"
+    PIPE = "|"
+    SEMICOLON = ";"
+    COLON = ":"
+    QUOTE = "'"
+    DOUBLE_QUOTE = '"'
+    BACKTICK = "`"
+    TILDE = "~"
+    COMMA = ","
+    LESS_THAN = "<"
+    PERIOD = "."
+    GREATER_THAN = ">"
+    SLASH = "/"
+    QUESTION = "?"
