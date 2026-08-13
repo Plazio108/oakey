@@ -1,12 +1,13 @@
 import os
 import sys
 import queue
+from queue import Queue
 import threading
 import time
 import atexit
 import string
 from contextlib import contextmanager
-from typing import Optional, Callable, Any, Generator
+from typing import Optional, Callable, Generator
 
 
 # =====================================================================
@@ -21,7 +22,8 @@ class _KeysMeta(type):
             upper_char = char.upper()
             attrs[upper_char] = char                    # Keys.A = "a"
             attrs[f"SHIFT_{upper_char}"] = upper_char   # Keys.SHIFT_A = "A"
-            attrs[f"CTRL_{upper_char}"] = f"ctrl+{char}" # Keys.CTRL_A = "ctrl+a"
+            # Keys.CTRL_A = "ctrl+a"
+            attrs[f"CTRL_{upper_char}"] = f"ctrl+{char}"
             attrs[f"ALT_{upper_char}"] = f"alt+{char}"   # Keys.ALT_A = "alt+a"
 
         # 2. Auto-generate numeric digits (NUM_0 to NUM_9, CTRL_0 to CTRL_9)
@@ -55,7 +57,7 @@ class Keys(metaclass=_KeysMeta):
     PAGE_UP = "page_up"
     PAGE_DOWN = "page_down"
     SPACE = "space"
-    
+
     # Function Keys
     F1 = "f1"
     F2 = "f2"
@@ -119,7 +121,8 @@ class KeyListener:
     }
 
     # Pre-sort by length descending (longest sequences evaluated first)
-    SORTED_ESCAPE_SEQUENCES = sorted(ESCAPE_SEQUENCES.items(), key=lambda x: len(x[0]), reverse=True)
+    SORTED_ESCAPE_SEQUENCES = sorted(
+        ESCAPE_SEQUENCES.items(), key=lambda x: len(x[0]), reverse=True)
 
     # Windows msvcrt virtual scan code mappings
     WIN_SPECIAL_KEYS = {
@@ -154,13 +157,13 @@ class KeyListener:
         self._target_queue = target_queue if target_queue is not None else queue.Queue()
         self.on_error = on_error
         self.suppress_errors = suppress_errors
-        
+
         self._running = False
         self._paused = False
         self._thread: Optional[threading.Thread] = None
         self._orig_attr = None
         self._posix_buffer = ""
-        
+
         # Emergency exit hook to ensure terminal state is never left corrupted
         atexit.register(self.stop)
 
@@ -169,11 +172,11 @@ class KeyListener:
     # ------------------------------------------------------------------
 
     @property
-    def queue(self) -> queue.Queue:
+    def queue(self) -> Queue:
         """Returns the current queue being used by the listener."""
         return self._target_queue
 
-    def get_queue(self) -> queue.Queue:
+    def get_queue(self) -> Queue:
         """Explicit method wrapper to return the active queue."""
         return self._target_queue
 
@@ -321,17 +324,20 @@ class KeyListener:
                     self._orig_attr = termios.tcgetattr(sys.stdin.fileno())
                 tty.setraw(sys.stdin.fileno())
             except Exception as e:
-                raise OakeyError(f"Failed to set terminal to raw mode: {e}") from e
+                raise OakeyError(
+                    f"Failed to set terminal to raw mode: {e}") from e
 
     def _restore_terminal(self) -> None:
         """Restores original terminal state on POSIX systems."""
         if os.name != "nt" and self._orig_attr is not None:
             try:
-                termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, self._orig_attr)
+                termios.tcsetattr(sys.stdin.fileno(),
+                                  termios.TCSADRAIN, self._orig_attr)
                 self._orig_attr = None
             except Exception as e:
                 if not self.suppress_errors:
-                    raise TerminalRestoreError(f"Failed restoring terminal attributes: {e}") from e
+                    raise TerminalRestoreError(
+                        f"Failed restoring terminal attributes: {e}") from e
 
     def _read_next_key(self) -> Optional[str]:
         """Routes reading logic by operating system."""
@@ -356,13 +362,20 @@ class KeyListener:
 
         # Control Codes & Characters
         code = ord(ch)
-        if code == 3: return "ctrl+c"
-        if code in (13, 10): return "enter"
-        if code == 9: return "tab"
-        if code == 27: return "escape"
-        if code == 8: return "backspace"
-        if code == 32: return "space"
-        if 1 <= code <= 26: return f"ctrl+{chr(code + 96)}"
+        if code == 3:
+            return "ctrl+c"
+        if code in (13, 10):
+            return "enter"
+        if code == 9:
+            return "tab"
+        if code == 27:
+            return "escape"
+        if code == 8:
+            return "backspace"
+        if code == 32:
+            return "space"
+        if 1 <= code <= 26:
+            return f"ctrl+{chr(code + 96)}"
 
         return ch
 
@@ -373,7 +386,8 @@ class KeyListener:
             rlist, _, _ = select.select([sys.stdin], [], [], 0.05)
             if rlist:
                 try:
-                    chunk = os.read(sys.stdin.fileno(), 1024).decode('utf-8', errors='replace')
+                    chunk = os.read(sys.stdin.fileno(), 1024).decode(
+                        'utf-8', errors='replace')
                     self._posix_buffer += chunk
                 except Exception:
                     pass
@@ -405,7 +419,7 @@ class KeyListener:
             # Known prefix waiting for remaining bytes
             if any(seq.startswith(buf) for seq, _ in self.SORTED_ESCAPE_SEQUENCES):
                 return None
-            
+
             # Unknown sequence cleanup
             self._posix_buffer = ""
             return f"raw_{repr(buf)}"
@@ -415,11 +429,17 @@ class KeyListener:
         self._posix_buffer = buf[1:]
 
         code = ord(first_char)
-        if code == 3: return "ctrl+c"
-        if first_char in ("\r", "\n"): return "enter"
-        if first_char == "\t": return "tab"
-        if first_char == " ": return "space"
-        if code in (8, 127): return "backspace"
-        if 1 <= code <= 26: return f"ctrl+{chr(code + 96)}"
+        if code == 3:
+            return "ctrl+c"
+        if first_char in ("\r", "\n"):
+            return "enter"
+        if first_char == "\t":
+            return "tab"
+        if first_char == " ":
+            return "space"
+        if code in (8, 127):
+            return "backspace"
+        if 1 <= code <= 26:
+            return f"ctrl+{chr(code + 96)}"
 
         return first_char
