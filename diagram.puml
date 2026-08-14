@@ -1,0 +1,83 @@
+@startuml 'Diagram'
+skinparam classAttributeIconSize 0
+package "oakey.listener" {
+  class Keys {
+    +BACKSPACE
+    +DELETE
+    +DOWN
+    +END
+    +ENTER
+    +ESCAPE
+    +F1
+    +F10
+    +F11
+    +F12
+    +F2
+    +F3
+    +F4
+    +F5
+    +F6
+    +F7
+    +F8
+    +F9
+    +HOME
+    +INSERT
+    +LEFT
+    +PAGE_DOWN
+    +PAGE_UP
+    +RIGHT
+    +SHIFT_TAB
+    +SPACE
+    +TAB
+    +UP
+  }
+  class _KeysMeta {
+    +__new__(mcs, name, bases, attrs)
+  }
+  class OakeyError {
+  }
+  class TerminalRestoreError {
+  }
+  class KeyListener {
+    +ESCAPE_SEQUENCES
+    +SORTED_ESCAPE_SEQUENCES
+    +WIN_SPECIAL_KEYS
+    #_orig_attr
+    #_paused
+    #_posix_buffer
+    #_running
+    #_target_queue
+    #_thread: Optional[threading.Thread]
+    +on_error
+    +suppress_errors
+    +__init__(target_queue: Optional[Queue],\n        on_error: Optional[Callable[[Exception], None]],\n        suppress_errors: bool)
+    +queue(): Queue
+    +get_queue(): Queue
+    +get(block: bool, timeout: Optional[float]): str
+    +get_nowait(): str
+    +put(item: str, block: bool, timeout: Optional[float]): None
+    +empty(): bool
+    +qsize(): int
+    +clear(): None
+    +pause(): None
+    +resume(): None
+    +is_paused(): bool
+    +handoff(): Generator[None, None, None]
+    +is_running(): bool
+    +start(): 'KeyListener'
+    +stop(): None
+    +__enter__(): 'KeyListener'
+    +__exit__(exc_type, exc_val, exc_tb): None
+    #_listen_loop(): None
+    #_handle_error(err: Exception): None
+    #_prepare_terminal(): None
+    #_restore_terminal(): None
+    #_read_next_key(): Optional[str]
+    #_read_key_windows(): Optional[str]
+    #_read_key_posix(): Optional[str]
+  }
+}
+type <|-- _KeysMeta
+Exception <|-- OakeyError
+OakeyError <|-- TerminalRestoreError
+@enduml

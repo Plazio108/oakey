@@ -1,13 +1,6 @@
-from oakey.listener import (
-    OakeyError,
-    TerminalRestoreError,
-    KeyListener
-)
-from oakey.keys import Keys
+from queue import Empty
 
-__all__ = [
-    "OakeyError",
-    "TerminalRestoreError",
-    "KeyListener",
-    "Keys"
-]
+from oakey.keys import Keys
+from oakey.listener import KeyListener, OakeyError, TerminalRestoreError
+
+__all__ = ["Empty", "KeyListener", "Keys", "OakeyError", "TerminalRestoreError"]
