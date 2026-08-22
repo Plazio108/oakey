@@ -1,28 +1,30 @@
+import atexit
 import os
+import select
+import string
 import sys
 import threading
 import time
-import atexit
-import string
-from queue import Queue, Empty
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
-from typing import Optional, Callable, Any, Generator
-
+from queue import Empty, Queue
 
 # =====================================================================
 # Constants & Key Mappings
 # =====================================================================
 
+
 class _KeysMeta(type):
     """Metaclass to dynamically auto-generate constants for letters, numbers, and modifier combinations."""
+
     def __new__(mcs, name, bases, attrs):
         # 1. Auto-generate letters (A-Z maps to lowercase, SHIFT_A maps to uppercase, CTRL_A, ALT_A)
         for char in string.ascii_lowercase:
             upper_char = char.upper()
-            attrs[upper_char] = char                    # Keys.A = "a"
-            attrs[f"SHIFT_{upper_char}"] = upper_char   # Keys.SHIFT_A = "A"
-            attrs[f"CTRL_{upper_char}"] = f"ctrl+{char}" # Keys.CTRL_A = "ctrl+a"
-            attrs[f"ALT_{upper_char}"] = f"alt+{char}"   # Keys.ALT_A = "alt+a"
+            attrs[upper_char] = char  # Keys.A = "a"
+            attrs[f"SHIFT_{upper_char}"] = upper_char  # Keys.SHIFT_A = "A"
+            attrs[f"CTRL_{upper_char}"] = f"ctrl+{char}"  # Keys.CTRL_A = "ctrl+a"
+            attrs[f"ALT_{upper_char}"] = f"alt+{char}"  # Keys.ALT_A = "alt+a"
 
         # 2. Auto-generate numeric digits (NUM_0 to NUM_9, CTRL_0 to CTRL_9)
         for digit in string.digits:
@@ -38,6 +40,7 @@ class Keys(metaclass=_KeysMeta):
     Standardized constant repository for Oakey key names, matching Textual syntax.
     Auto-generates letters (A-Z), numbers (0-9), and common combinations.
     """
+
     # Special & Navigation Keys
     UP = "up"
     DOWN = "down"
@@ -55,7 +58,7 @@ class Keys(metaclass=_KeysMeta):
     PAGE_UP = "page_up"
     PAGE_DOWN = "page_down"
     SPACE = "space"
-    
+
     # Function Keys
     F1 = "f1"
     F2 = "f2"
@@ -75,19 +78,19 @@ class Keys(metaclass=_KeysMeta):
 # Exceptions
 # =====================================================================
 
+
 class OakeyError(Exception):
     """Base exception for all oakey errors."""
-    pass
 
 
 class TerminalRestoreError(OakeyError):
     """Raised when failing to restore terminal state."""
-    pass
 
 
 # =====================================================================
 # Listener Class
 # =====================================================================
+
 
 class KeyListener:
     """
@@ -119,7 +122,9 @@ class KeyListener:
     }
 
     # Pre-sort by length descending (longest sequences evaluated first)
-    SORTED_ESCAPE_SEQUENCES = sorted(ESCAPE_SEQUENCES.items(), key=lambda x: len(x[0]), reverse=True)
+    SORTED_ESCAPE_SEQUENCES = sorted(
+        ESCAPE_SEQUENCES.items(), key=lambda x: len(x[0]), reverse=True
+    )
 
     # Windows msvcrt virtual scan code mappings
     WIN_SPECIAL_KEYS = {
@@ -142,9 +147,9 @@ class KeyListener:
 
     def __init__(
         self,
-        target_queue: Optional[Queue] = None,
-        on_error: Optional[Callable[[Exception], None]] = None,
-        suppress_errors: bool = True
+        target_queue: Queue | None = None,
+        on_error: Callable[[Exception], None] | None = None,
+        suppress_errors: bool = True,
     ):
         """
         :param target_queue: Optional Queue instance to put keys into. Creates one if None.
@@ -154,13 +159,13 @@ class KeyListener:
         self._target_queue = target_queue if target_queue is not None else Queue()
         self.on_error = on_error
         self.suppress_errors = suppress_errors
-        
+
         self._running = False
         self._paused = False
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._orig_attr = None
         self._posix_buffer = ""
-        
+
         # Emergency exit hook to ensure terminal state is never left corrupted
         atexit.register(self.stop)
 
@@ -177,7 +182,7 @@ class KeyListener:
         """Explicit method wrapper to return the active queue."""
         return self._target_queue
 
-    def get(self, block: bool = True, timeout: Optional[float] = None) -> str:
+    def get(self, block: bool = True, timeout: float | None = None) -> str:
         """Get a key event directly from the listener queue."""
         return self._target_queue.get(block=block, timeout=timeout)
 
@@ -185,7 +190,7 @@ class KeyListener:
         """Fetch a key non-blockingly from the queue."""
         return self._target_queue.get_nowait()
 
-    def put(self, item: str, block: bool = True, timeout: Optional[float] = None) -> None:
+    def put(self, item: str, block: bool = True, timeout: float | None = None) -> None:
         """Inject an event/item manually into the queue."""
         self._target_queue.put(item, block=block, timeout=timeout)
 
@@ -228,7 +233,7 @@ class KeyListener:
         return self._paused
 
     @contextmanager
-    def handoff(self) -> Generator[None, None, None]:
+    def handoff(self) -> Generator[None]:
         """
         Context manager that completely stops the listener thread and restores original
         terminal settings. Essential for interactive external commands (like yazi, vim, fzf)
@@ -316,6 +321,7 @@ class KeyListener:
         if os.name != "nt":
             import termios
             import tty
+
             try:
                 if self._orig_attr is None:
                     self._orig_attr = termios.tcgetattr(sys.stdin.fileno())
@@ -327,22 +333,28 @@ class KeyListener:
         """Restores original terminal state on POSIX systems."""
         if os.name != "nt" and self._orig_attr is not None:
             import termios
+
             try:
-                termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, self._orig_attr)
+                termios.tcsetattr(
+                    sys.stdin.fileno(), termios.TCSADRAIN, self._orig_attr
+                )
                 self._orig_attr = None
             except Exception as e:
                 if not self.suppress_errors:
-                    raise TerminalRestoreError(f"Failed restoring terminal attributes: {e}") from e
+                    raise TerminalRestoreError(
+                        f"Failed restoring terminal attributes: {e}"
+                    ) from e
 
-    def _read_next_key(self) -> Optional[str]:
+    def _read_next_key(self) -> str | None:
         """Routes reading logic by operating system."""
         if os.name == "nt":
             return self._read_key_windows()
         return self._read_key_posix()
 
-    def _read_key_windows(self) -> Optional[str]:
+    def _read_key_windows(self) -> str | None:
         """Windows key capturing via msvcrt."""
         import msvcrt
+
         if not msvcrt.kbhit():
             time.sleep(0.01)
             return None
@@ -358,26 +370,94 @@ class KeyListener:
 
         # Control Codes & Characters
         code = ord(ch)
-        if code == 3: return "ctrl+c"
-        if code in (13, 10): return "enter"
-        if code == 9: return "tab"
-        if code == 27: return "escape"
-        if code == 8: return "backspace"
-        if code == 32: return "space"
-        if 1 <= code <= 26: return f"ctrl+{chr(code + 96)}"
+        if code == 3:
+            return "ctrl+c"
+        if code in (13, 10):
+            return "enter"
+        if code == 9:
+            return "tab"
+        if code == 27:
+            return "escape"
+        if code == 8:
+            return "backspace"
+        if code == 32:
+            return "space"
+        if 1 <= code <= 26:
+            return f"ctrl+{chr(code + 96)}"
 
         return ch
 
-    def _read_key_posix(self) -> Optional[str]:
-        """Unix/macOS chunked reading via os.read."""
-        import select
-        
+    # def _read_key_posix(self) -> str | None:
+    #     """Unix/macOS chunked reading via os.read."""
+    #     import select
+
+    #     # Pull everything from OS buffer into internal buffer
+    #     if not self._posix_buffer:
+    #         rlist, _, _ = select.select([sys.stdin], [], [], 0.05)
+    #         if rlist:
+    #             try:
+    #                 chunk = os.read(sys.stdin.fileno(), 1024).decode('utf-8', errors='replace')
+    #                 self._posix_buffer += chunk
+    #             except Exception:
+    #                 pass
+
+    #     if not self._posix_buffer:
+    #         return None
+
+    #     buf = self._posix_buffer
+
+    #     # Check for known escape sequences (longest match first)
+    #     for seq, name in self.SORTED_ESCAPE_SEQUENCES:
+    #         if buf.startswith(seq):
+    #             self._posix_buffer = buf[len(seq):]
+    #             return name
+
+    #     # Dynamic Escape (\x1b) parsing
+    #     if buf.startswith("\x1b"):
+    #         # Alt+Key combo (e.g., \x1ba -> alt+a)
+    #         if len(buf) >= 2 and buf[1] not in ('[', 'O'):
+    #             char = buf[1]
+    #             self._posix_buffer = buf[2:]
+    #             return f"alt+{char}"
+
+    #         # Standalone Escape
+    #         if len(buf) == 1:
+    #             self._posix_buffer = ""
+    #             return "escape"
+
+    #         # Known prefix waiting for remaining bytes
+    #         if any(seq.startswith(buf) for seq, _ in self.SORTED_ESCAPE_SEQUENCES):
+    #             return None
+
+    #         # Unknown sequence cleanup
+    #         self._posix_buffer = ""
+    #         return f"raw_{buf!r}"
+
+    #     # Standard character parsing
+    #     first_char = buf[0]
+    #     self._posix_buffer = buf[1:]
+
+    #     code = ord(first_char)
+    #     if code == 3: return "ctrl+c"
+    #     if first_char in ("\r", "\n"): return "enter"
+    #     if first_char == "\t": return "tab"
+    #     if first_char == " ": return "space"
+    #     if code in (8, 127): return "backspace"
+    #     if 1 <= code <= 26: return f"ctrl+{chr(code + 96)}"
+
+    #     return first_char
+
+    def _read_key_posix(self) -> str | None:
+        """Unix/macOS chunked reading via os.read with terminal protocol filtering."""
+
         # Pull everything from OS buffer into internal buffer
         if not self._posix_buffer:
             rlist, _, _ = select.select([sys.stdin], [], [], 0.05)
             if rlist:
                 try:
-                    chunk = os.read(sys.stdin.fileno(), 1024).decode('utf-8', errors='replace')
+                    chunk = os.read(sys.stdin.fileno(), 1024).decode(
+                        "utf-8", errors="replace"
+                    )
                     self._posix_buffer += chunk
                 except Exception:
                     pass
@@ -387,16 +467,34 @@ class KeyListener:
 
         buf = self._posix_buffer
 
-        # Check for known escape sequences (longest match first)
+        # -------------------------------------------------------------
+        # 1. Filter Kitty Remote Control IPC responses (@kitty-cmd{...})
+        # -------------------------------------------------------------
+        if buf.startswith("@kitty-cmd"):
+            # Kitty command responses end with a newline
+            end_idx = buf.find("\n")
+            if end_idx != -1:
+                # Flush the Kitty IPC payload from the buffer
+                self._posix_buffer = buf[end_idx + 1 :]
+                return None
+            else:
+                # Payload incomplete; wait for remaining bytes on next read
+                return None
+
+        # -------------------------------------------------------------
+        # 2. Check for known escape sequences (longest match first)
+        # -------------------------------------------------------------
         for seq, name in self.SORTED_ESCAPE_SEQUENCES:
             if buf.startswith(seq):
-                self._posix_buffer = buf[len(seq):]
+                self._posix_buffer = buf[len(seq) :]
                 return name
 
-        # Dynamic Escape (\x1b) parsing
+        # -------------------------------------------------------------
+        # 3. Dynamic Escape (\x1b) parsing
+        # -------------------------------------------------------------
         if buf.startswith("\x1b"):
             # Alt+Key combo (e.g., \x1ba -> alt+a)
-            if len(buf) >= 2 and buf[1] not in ('[', 'O'):
+            if len(buf) >= 2 and buf[1] not in ("[", "O"):
                 char = buf[1]
                 self._posix_buffer = buf[2:]
                 return f"alt+{char}"
@@ -409,21 +507,29 @@ class KeyListener:
             # Known prefix waiting for remaining bytes
             if any(seq.startswith(buf) for seq, _ in self.SORTED_ESCAPE_SEQUENCES):
                 return None
-            
+
             # Unknown sequence cleanup
             self._posix_buffer = ""
-            return f"raw_{repr(buf)}"
+            return f"raw_{buf!r}"
 
-        # Standard character parsing
+        # -------------------------------------------------------------
+        # 4. Standard character parsing
+        # -------------------------------------------------------------
         first_char = buf[0]
         self._posix_buffer = buf[1:]
 
         code = ord(first_char)
-        if code == 3: return "ctrl+c"
-        if first_char in ("\r", "\n"): return "enter"
-        if first_char == "\t": return "tab"
-        if first_char == " ": return "space"
-        if code in (8, 127): return "backspace"
-        if 1 <= code <= 26: return f"ctrl+{chr(code + 96)}"
+        if code == 3:
+            return "ctrl+c"
+        if first_char in ("\r", "\n"):
+            return "enter"
+        if first_char == "\t":
+            return "tab"
+        if first_char == " ":
+            return "space"
+        if code in (8, 127):
+            return "backspace"
+        if 1 <= code <= 26:
+            return f"ctrl+{chr(code + 96)}"
 
         return first_char
