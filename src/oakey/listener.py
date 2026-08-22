@@ -387,68 +387,9 @@ class KeyListener:
 
         return ch
 
-    # def _read_key_posix(self) -> str | None:
-    #     """Unix/macOS chunked reading via os.read."""
-    #     import select
-
-    #     # Pull everything from OS buffer into internal buffer
-    #     if not self._posix_buffer:
-    #         rlist, _, _ = select.select([sys.stdin], [], [], 0.05)
-    #         if rlist:
-    #             try:
-    #                 chunk = os.read(sys.stdin.fileno(), 1024).decode('utf-8', errors='replace')
-    #                 self._posix_buffer += chunk
-    #             except Exception:
-    #                 pass
-
-    #     if not self._posix_buffer:
-    #         return None
-
-    #     buf = self._posix_buffer
-
-    #     # Check for known escape sequences (longest match first)
-    #     for seq, name in self.SORTED_ESCAPE_SEQUENCES:
-    #         if buf.startswith(seq):
-    #             self._posix_buffer = buf[len(seq):]
-    #             return name
-
-    #     # Dynamic Escape (\x1b) parsing
-    #     if buf.startswith("\x1b"):
-    #         # Alt+Key combo (e.g., \x1ba -> alt+a)
-    #         if len(buf) >= 2 and buf[1] not in ('[', 'O'):
-    #             char = buf[1]
-    #             self._posix_buffer = buf[2:]
-    #             return f"alt+{char}"
-
-    #         # Standalone Escape
-    #         if len(buf) == 1:
-    #             self._posix_buffer = ""
-    #             return "escape"
-
-    #         # Known prefix waiting for remaining bytes
-    #         if any(seq.startswith(buf) for seq, _ in self.SORTED_ESCAPE_SEQUENCES):
-    #             return None
-
-    #         # Unknown sequence cleanup
-    #         self._posix_buffer = ""
-    #         return f"raw_{buf!r}"
-
-    #     # Standard character parsing
-    #     first_char = buf[0]
-    #     self._posix_buffer = buf[1:]
-
-    #     code = ord(first_char)
-    #     if code == 3: return "ctrl+c"
-    #     if first_char in ("\r", "\n"): return "enter"
-    #     if first_char == "\t": return "tab"
-    #     if first_char == " ": return "space"
-    #     if code in (8, 127): return "backspace"
-    #     if 1 <= code <= 26: return f"ctrl+{chr(code + 96)}"
-
-    #     return first_char
-
     def _read_key_posix(self) -> str | None:
-        """Unix/macOS chunked reading via os.read with terminal protocol filtering."""
+        """Unix/macOS chunked reading via os.read."""
+        import select
 
         # Pull everything from OS buffer into internal buffer
         if not self._posix_buffer:
@@ -467,31 +408,13 @@ class KeyListener:
 
         buf = self._posix_buffer
 
-        # -------------------------------------------------------------
-        # 1. Filter Kitty Remote Control IPC responses (@kitty-cmd{...})
-        # -------------------------------------------------------------
-        if buf.startswith("@kitty-cmd"):
-            # Kitty command responses end with a newline
-            end_idx = buf.find("\n")
-            if end_idx != -1:
-                # Flush the Kitty IPC payload from the buffer
-                self._posix_buffer = buf[end_idx + 1 :]
-                return None
-            else:
-                # Payload incomplete; wait for remaining bytes on next read
-                return None
-
-        # -------------------------------------------------------------
-        # 2. Check for known escape sequences (longest match first)
-        # -------------------------------------------------------------
+        # Check for known escape sequences (longest match first)
         for seq, name in self.SORTED_ESCAPE_SEQUENCES:
             if buf.startswith(seq):
                 self._posix_buffer = buf[len(seq) :]
                 return name
 
-        # -------------------------------------------------------------
-        # 3. Dynamic Escape (\x1b) parsing
-        # -------------------------------------------------------------
+        # Dynamic Escape (\x1b) parsing
         if buf.startswith("\x1b"):
             # Alt+Key combo (e.g., \x1ba -> alt+a)
             if len(buf) >= 2 and buf[1] not in ("[", "O"):
@@ -512,9 +435,7 @@ class KeyListener:
             self._posix_buffer = ""
             return f"raw_{buf!r}"
 
-        # -------------------------------------------------------------
-        # 4. Standard character parsing
-        # -------------------------------------------------------------
+        # Standard character parsing
         first_char = buf[0]
         self._posix_buffer = buf[1:]
 
@@ -533,3 +454,90 @@ class KeyListener:
             return f"ctrl+{chr(code + 96)}"
 
         return first_char
+
+    # def _read_key_posix(self) -> str | None:
+    #     """Unix/macOS chunked reading via os.read with terminal protocol filtering."""
+
+    #     # Pull everything from OS buffer into internal buffer
+    #     if not self._posix_buffer:
+    #         rlist, _, _ = select.select([sys.stdin], [], [], 0.05)
+    #         if rlist:
+    #             try:
+    #                 chunk = os.read(sys.stdin.fileno(), 1024).decode(
+    #                     "utf-8", errors="replace"
+    #                 )
+    #                 self._posix_buffer += chunk
+    #             except Exception:
+    #                 pass
+
+    #     if not self._posix_buffer:
+    #         return None
+
+    #     buf = self._posix_buffer
+
+    #     # -------------------------------------------------------------
+    #     # 1. Filter Kitty Remote Control IPC responses (@kitty-cmd{...})
+    #     # -------------------------------------------------------------
+    #     if buf.startswith("@kitty-cmd"):
+    #         # Kitty command responses end with a newline
+    #         end_idx = buf.find("\n")
+    #         if end_idx != -1:
+    #             # Flush the Kitty IPC payload from the buffer
+    #             self._posix_buffer = buf[end_idx + 1 :]
+    #             return None
+    #         else:
+    #             # Payload incomplete; wait for remaining bytes on next read
+    #             return None
+
+    #     # -------------------------------------------------------------
+    #     # 2. Check for known escape sequences (longest match first)
+    #     # -------------------------------------------------------------
+    #     for seq, name in self.SORTED_ESCAPE_SEQUENCES:
+    #         if buf.startswith(seq):
+    #             self._posix_buffer = buf[len(seq) :]
+    #             return name
+
+    #     # -------------------------------------------------------------
+    #     # 3. Dynamic Escape (\x1b) parsing
+    #     # -------------------------------------------------------------
+    #     if buf.startswith("\x1b"):
+    #         # Alt+Key combo (e.g., \x1ba -> alt+a)
+    #         if len(buf) >= 2 and buf[1] not in ("[", "O"):
+    #             char = buf[1]
+    #             self._posix_buffer = buf[2:]
+    #             return f"alt+{char}"
+
+    #         # Standalone Escape
+    #         if len(buf) == 1:
+    #             self._posix_buffer = ""
+    #             return "escape"
+
+    #         # Known prefix waiting for remaining bytes
+    #         if any(seq.startswith(buf) for seq, _ in self.SORTED_ESCAPE_SEQUENCES):
+    #             return None
+
+    #         # Unknown sequence cleanup
+    #         self._posix_buffer = ""
+    #         return f"raw_{buf!r}"
+
+    #     # -------------------------------------------------------------
+    #     # 4. Standard character parsing
+    #     # -------------------------------------------------------------
+    #     first_char = buf[0]
+    #     self._posix_buffer = buf[1:]
+
+    #     code = ord(first_char)
+    #     if code == 3:
+    #         return "ctrl+c"
+    #     if first_char in ("\r", "\n"):
+    #         return "enter"
+    #     if first_char == "\t":
+    #         return "tab"
+    #     if first_char == " ":
+    #         return "space"
+    #     if code in (8, 127):
+    #         return "backspace"
+    #     if 1 <= code <= 26:
+    #         return f"ctrl+{chr(code + 96)}"
+
+    #     return first_char
